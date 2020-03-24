@@ -1,2 +1,16 @@
-# flutter_aquarium
-На старте приложения случайным образом (в случайные начальные позиции) в аквариум должны быть добавлены 10 рыб. Рыбы бывают двух видов: хищные и "травоядные". Рыбы могут иметь размер от 1 до 3 условных единиц. Скорость рыбы обратна размеру, то есть рыба размером 1 плавает со скоростью 3 и т.д. Каждая рыба при появлении в аквариуме начинает плыть в случайном направлении с положенной ей скоростью и как только достигает края аквариума (аквариум это собственно экран) меняет движение на другое случайное направление, оставаясь внутри аквариума. Хищные рыбы едят других хищных рыб и травоядных. Рыба меньшего размера не может съесть рыбу большего размера (Исключение: Хищная рыба размера n может поедать травоядных рыб размером &lt;= n+1). Если рыбу съели она должна исчезнуть с экрана и через 15 секунд надо запустить новую случайную рыбу случайного размера в аквариум. Столкновения можно, для простоты, определять пересечением прямоугольников - реальная форма рыбы на картинке не имеет значения.
+# flutterapp
+
+A new Flutter application.
+
+## Getting Started
+
+This project is a starting point for a Flutter application.
+
+A few resources to get you started if this is your first Flutter project:
+
+- [Lab: Write your first Flutter app](https://flutter.dev/docs/get-started/codelab)
+- [Cookbook: Useful Flutter samples](https://flutter.dev/docs/cookbook)
+
+For help getting started with Flutter, view our
+[online documentation](https://flutter.dev/docs), which offers tutorials,
+samples, guidance on mobile development, and a full API reference.
