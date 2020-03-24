@@ -29,6 +29,7 @@ class RepeatingAnimationDemo extends StatefulWidget {
   RepeatingAnimationDemoState createState() => RepeatingAnimationDemoState();
 }
 
+// TODO add architecture
 class RepeatingAnimationDemoState extends State<RepeatingAnimationDemo>
     with TickerProviderStateMixin {
   List<AnimationController> _animationControllers = new List();
@@ -58,12 +59,13 @@ class RepeatingAnimationDemoState extends State<RepeatingAnimationDemo>
       });
   }
 
+//  TODO use screen borders
   double generateLeft() {
-    return random.nextInt(10).toDouble() + 1;
+    return random.nextInt(9).toDouble() + 1;
   }
 
   double generateTop() {
-    return random.nextInt(5).toDouble() + 1;
+    return random.nextInt(4).toDouble() + 1;
   }
 
   @override
@@ -91,7 +93,15 @@ class RepeatingAnimationDemoState extends State<RepeatingAnimationDemo>
       });
     }
 
-    return Stack(children: _createChildren());
+    return Container(
+        decoration: BoxDecoration(
+          image: DecorationImage(
+            image: new NetworkImage(
+                "https://i.pinimg.com/originals/2d/da/d6/2ddad6c648aa6025c134e40c085865ce.jpg"),
+            fit: BoxFit.cover,
+          ),
+        ),
+        child: Stack(children: _createChildren()));
   }
 
   @override
