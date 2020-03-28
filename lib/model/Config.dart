@@ -1,4 +1,5 @@
-const int BASE_ANIMATION_DURATION = 10;
-const int FISH_COUNT = 5;
+const int BASE_ANIMATION_DURATION = 5;
+const int FISH_COUNT = 10;
 const double FISH_BASE_WIDTH = 30.0;
-const double FISH_BASE_HEIGHT = 90.0;
+const double FISH_BASE_HEIGHT = 50.0;
+const int ADD_NEW_FISH_TIMER = 5;
