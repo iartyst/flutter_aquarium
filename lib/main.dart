@@ -48,11 +48,11 @@ class FlutterAquariumState extends State<FlutterAquarium>
             // Predator eats non-predator same or bigger size
             ((!fish.isPredator &&
                     entry.key.isPredator &&
-                    fish.size - 1 <= entry.key.size ||
+                    fish.size - 1 <= entry.key.size) ||
                 // Predator eats predator same or less size
                 (fish.isPredator &&
                     entry.key.isPredator &&
-                    fish.size <= entry.key.size))) &&
+                    fish.size < entry.key.size)) &&
             // Avoid self-compare
             entry.value.child.key != slide.child.key &&
             // Avoid init errors
