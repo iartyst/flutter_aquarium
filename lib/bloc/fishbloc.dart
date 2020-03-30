@@ -14,6 +14,7 @@ class FishBloc {
 
   Stream<DataState> get fish => _fishStreamController.stream;
 
+  /// Load one fish
   void loadFishData() {
     _fishStreamController.sink.add(DataState._fishLoading());
     _repository.getFish().then((fish) {
@@ -21,6 +22,7 @@ class FishBloc {
     });
   }
 
+  /// Load few fishes
   void loadFishesData() {
     _repository.getFishes().then((fishes) {
       _fishStreamController.sink.add(DataState._fishesData(fishes));
