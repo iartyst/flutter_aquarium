@@ -1,17 +1,16 @@
-import 'dart:async';
-import 'dart:math';
-
 import 'package:flutter/animation.dart';
 import 'package:flutter/material.dart';
 
+import 'bloc/fishbloc.dart';
 import 'model/Config.dart';
 import 'model/Fish.dart';
+import 'repo/fishrepo.dart';
 
 void main() {
-  runApp(MyApp());
+  runApp(_MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class _MyApp extends StatelessWidget {
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
@@ -20,22 +19,25 @@ class MyApp extends StatelessWidget {
         theme: ThemeData(
           primarySwatch: Colors.blue,
         ),
-        home: Container(child: FlutterAquarium()));
+        home: Container(child: _FlutterAquarium(FishRepository())));
   }
 }
 
-class FlutterAquarium extends StatefulWidget {
+class _FlutterAquarium extends StatefulWidget {
+  _FlutterAquarium(this._repository);
+
+  final FishRepository _repository;
+
   @override
-  FlutterAquariumState createState() => FlutterAquariumState();
+  _FlutterAquariumState createState() => _FlutterAquariumState();
 }
 
-// TODO add architecture
-class FlutterAquariumState extends State<FlutterAquarium>
+class _FlutterAquariumState extends State<_FlutterAquarium>
     with TickerProviderStateMixin {
-  List<AnimationController> _animationControllers = new List();
-  Map<Fish, SlideTransition> _fishAndViewsMap = Map();
+  FishBloc _fishBloc;
 
-  Random _random = new Random();
+  Map<Fish, SlideTransition> _fishAndViewsMap = Map();
+  List<AnimationController> _animationControllers = new List();
 
   double _screenHeight;
   double _screenWidth;
@@ -43,6 +45,174 @@ class FlutterAquariumState extends State<FlutterAquarium>
   @override
   initState() {
     super.initState();
+    _fishBloc = FishBloc(widget._repository);
+    _fishBloc.loadFishesData();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.blue,
+      body: SafeArea(
+        child: StreamBuilder<DataState>(
+          stream: _fishBloc.fish,
+          initialData: FishInitState(),
+          builder: (context, snapshot) {
+            switch (snapshot.data.runtimeType) {
+              case FishInitState:
+                {
+                  return _buildInitial();
+                }
+              case FishesDataState:
+                {
+                  FishesDataState state = snapshot.data;
+                  _createFishesViews(state.fishes);
+                  return _buildContent();
+                }
+              case FishDataState:
+                {
+                  FishDataState state = snapshot.data;
+                  _createFishView(state.fish);
+                  return _buildContent();
+                }
+              case FishLoadingState:
+                return _buildLoading();
+              default:
+                return _buildContent();
+            }
+          },
+        ),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _fishBloc.dispose();
+    _animationControllers.forEach((animationController) {
+      animationController.dispose();
+    });
+    super.dispose();
+  }
+
+  //region Widget states
+  Widget _buildInitial() {
+    _setScreenData();
+    return const Center(
+      child: CircularProgressIndicator(backgroundColor: Colors.white),
+    );
+  }
+
+  Widget _buildContent() {
+    return Stack(children: _fishAndViewsMap.values.toList());
+  }
+
+  Widget _buildLoading() {
+    return Stack(
+      children: <Widget>[
+        const Center(
+          child: Text("One fish just ate another!"),
+        ),
+        _buildContent()
+      ],
+    );
+  }
+
+  //endregion
+
+  //region Work with views
+  /// Once after screen is created need to set values
+  void _setScreenData() {
+    _screenHeight =
+        MediaQuery.of(context).size.height - MediaQuery.of(context).padding.top;
+    _screenWidth = MediaQuery.of(context).size.width;
+  }
+
+  void _createFishesViews(final List<Fish> fishes) {
+    fishes.forEach((fish) {
+      _createFishView(fish);
+    });
+  }
+
+  /// Create fish view and add it into map
+  void _createFishView(final Fish fish) {
+    final SlideTransition slideTransition = SlideTransition(
+      position: _animate(fish.size),
+      child: Image.network(
+        fish.imageUrl,
+        key: GlobalKey(),
+        width: fish.size * FISH_BASE_WIDTH,
+        height: fish.size * FISH_BASE_HEIGHT,
+      ),
+    );
+    _fishAndViewsMap[fish] = slideTransition;
+  }
+
+  //endregion
+
+  //region Work with Offset and Animation
+  Animation<Offset> _animate(final int fishSize) {
+    final AnimationController _animationController = AnimationController(
+      vsync: this,
+      duration: Duration(seconds: fishSize * BASE_ANIMATION_DURATION),
+    );
+
+    _animationController.forward();
+    _animationControllers.add(_animationController);
+
+    final Tween<Offset> _tween = Tween<Offset>(
+        begin: _generateOffset(fishSize), end: _generateOffset(fishSize));
+
+    return _tween.animate(_animationController)
+      ..addListener(() {
+        /**
+         * To check the intersection of the views at each tick of the animation
+         * go through the algorithm
+         * */
+        _checkViews();
+      })
+      ..addStatusListener((status) {
+        /**
+         * Make the movement animation endless by constantly updating from and to
+         */
+        if (status == AnimationStatus.completed) {
+          _tween.begin = _tween.end;
+          _animationController.reset();
+          _tween.end = _generateOffset(fishSize);
+          _animationController.forward();
+        }
+      });
+  }
+
+  Offset _generateOffset(int fishSize) {
+    return Offset(
+        _generateHorizontal(fishSize) * _fishBloc.getRandom().nextDouble(),
+        _generateVertical(fishSize) * _fishBloc.getRandom().nextDouble());
+  }
+
+  /// Max width value
+  double _generateHorizontal(int fishSize) {
+    return ((_screenWidth - (fishSize * FISH_BASE_WIDTH)) /
+        (fishSize * FISH_BASE_WIDTH));
+  }
+
+  /// Max height value
+  double _generateVertical(int fishSize) {
+    return ((_screenHeight - (fishSize * FISH_BASE_HEIGHT)) /
+        (fishSize * FISH_BASE_HEIGHT));
+  }
+
+//endregion
+
+  //region Check Fish views on the screen
+  void _checkViews() {
+    final sizeBefore = _fishAndViewsMap.length;
+    _checkAreThereFishesAtSamePoint();
+
+    /// If there are fewer fish, start the timer to add a new
+    if (sizeBefore > _fishAndViewsMap.length) {
+      _fishBloc.loadFishData();
+    }
   }
 
   void _checkAreThereFishesAtSamePoint() {
@@ -72,114 +242,11 @@ class FlutterAquariumState extends State<FlutterAquarium>
                 FISH_BASE_HEIGHT)));
   }
 
+  /// Get the view position on the screen.
   Offset _getSlidePosition(SlideTransition slide) {
     final GlobalKey key = slide.child.key;
     final RenderBox renderBoxRed = key.currentContext?.findRenderObject();
     return renderBoxRed?.localToGlobal(Offset.zero);
   }
-
-  @override
-  void setState(VoidCallback fn) {
-    super.setState(() {
-      final sizeBefore = _fishAndViewsMap.length;
-      _checkAreThereFishesAtSamePoint();
-      // Add fish in 15 secs
-      if (sizeBefore > _fishAndViewsMap.length) {
-        _createTimerToAddNewFish();
-      }
-    });
-  }
-
-  Animation<Offset> animate(int fishSize) {
-    final AnimationController _animationController = AnimationController(
-      vsync: this,
-      duration: Duration(seconds: fishSize * BASE_ANIMATION_DURATION),
-    );
-
-    _animationController.forward();
-
-    _animationControllers.add(_animationController);
-
-    final startOffset = _generateOffset(fishSize);
-
-    final Tween<Offset> _tween =
-        Tween<Offset>(begin: startOffset, end: _generateOffset(fishSize));
-
-    return _tween.animate(_animationController)
-      ..addListener(() {
-        setState(() {});
-      })
-      ..addStatusListener((status) {
-        if (status == AnimationStatus.completed) {
-          _tween.begin = _tween.end;
-          _animationController.reset();
-          _tween.end = _generateOffset(fishSize);
-          _animationController.forward();
-        }
-      });
-  }
-
-  Offset _generateOffset(int fishSize) {
-    return Offset(_generateHorizontal(fishSize) * _random.nextDouble(),
-        _generateVertical(fishSize) * _random.nextDouble());
-  }
-
-  // Max value
-  double _generateHorizontal(int fishSize) {
-    return ((_screenWidth - (fishSize * FISH_BASE_WIDTH)) /
-        (fishSize * FISH_BASE_WIDTH));
-  }
-
-  // Max value
-  double _generateVertical(int fishSize) {
-    return ((_screenHeight - (fishSize * FISH_BASE_HEIGHT)) /
-        (fishSize * FISH_BASE_HEIGHT));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    _screenHeight =
-        MediaQuery.of(context).size.height - MediaQuery.of(context).padding.top;
-    _screenWidth = MediaQuery.of(context).size.width;
-
-    if (_fishAndViewsMap.isEmpty) {
-      while (_fishAndViewsMap.length < FISH_COUNT) {
-        _createFish();
-      }
-    }
-
-    return Scaffold(
-      backgroundColor: Colors.blue,
-      body: Stack(children: _fishAndViewsMap.values.toList()),
-    );
-  }
-
-  @override
-  void dispose() {
-    _animationControllers.forEach((element) {
-      element.dispose();
-    });
-    super.dispose();
-  }
-
-  void _createTimerToAddNewFish() {
-    Future.delayed(
-        const Duration(seconds: ADD_NEW_FISH_TIMER), () => _createFish());
-  }
-
-  void _createFish() {
-    final Fish fish =
-        Fish(_random.nextBool(), _random.nextInt(FISH_MAX_SIZE) + 1);
-    // TODO maybe try with aligh
-    final SlideTransition slideTransition = SlideTransition(
-      position: animate(fish.size),
-      child: Image.network(
-        fish.imageUrl,
-        key: GlobalKey(),
-        width: fish.size * FISH_BASE_WIDTH,
-        height: fish.size * FISH_BASE_HEIGHT,
-      ),
-    );
-    _fishAndViewsMap[fish] = slideTransition;
-  }
+//endregion
 }

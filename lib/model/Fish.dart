@@ -1,10 +1,16 @@
+import 'package:meta/meta.dart';
+
+import 'Config.dart';
+
 class Fish {
+  Fish({
+    @required this.isPredator,
+    @required this.size,
+  });
+
   final bool isPredator;
   final int size;
 
-  Fish(this.isPredator, this.size);
-
-  String get imageUrl => isPredator
-      ? 'https://icons.iconarchive.com/icons/google/noto-emoji-animals-nature/512/22296-shark-icon.png'
-      : 'https://icons.iconarchive.com/icons/google/noto-emoji-animals-nature/512/22294-tropical-fish-icon.png';
+  String get imageUrl =>
+      isPredator ? PREDATOR_IMAGE_URL : HERBIVOROUS_IMAGE_URL;
 }
